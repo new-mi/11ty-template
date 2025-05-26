@@ -1,0 +1,25 @@
+{
+  "name": "vite-with-plugins",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "eleventy",
+    "start": "eleventy --serve"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "clsx": "^2.1.1",
+    "eleventy": "^1.0.7",
+    "eleventy-plugin-react": "github:kaicataldo/eleventy-plugin-react",
+    "esbuild": "^0.25.4",
+    "prettier": "^3.5.3",
+    "sass": "^1.89.0"
+  }
+}
