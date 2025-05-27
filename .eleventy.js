@@ -72,9 +72,10 @@ async function buildSass() {
 
   const files = fs.readdirSync(sassDir).filter(f => f.endsWith(".sass") || f.endsWith(".scss"));
   files.forEach(filename => {
+		const isMinify = filename.endsWith(".min.scss") || filename.endsWith(".min.sass");
     const result = sass.compile(path.join(sassDir, filename), {
       sourceMap: false,
-      outputStyle: 'expanded',
+      style: isMinify ? 'compressed' : 'expanded',
     });
     fs.writeFileSync(path.join(outDir, filename.replace(/\.(sass|scss)$/, ".css")), result.css);
   });
@@ -92,7 +93,7 @@ async function buildJS() {
     return esbuild.build({
       entryPoints: [path.join(jsDir, filename)],
       bundle: true,
-      minify: false,
+      minify: filename.endsWith(".min.js"),
       sourcemap: false,
       outfile: path.join(outDir, filename),
       platform: "browser",

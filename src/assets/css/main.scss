@@ -1,3 +1,16 @@
 @use "../../styles/normalize.css";
 @use "../../styles/global.scss";
-@use "../../styles/components.scss";
+
+@use "../../components/Button/Button.scss";
+@use "../../components/Header/Header.scss";
+@use "../../components/TestSwiper/TestSwiper.scss";
+@use "../../components/TestFancybox/TestFancybox.scss";
+
+.test-image {
+	width: 100px;
+	height: 100px;
+	background-image: url("/assets/images/angel.png");
+	background-size: cover;
+	background-position: center;
+	background-repeat: no-repeat;
+}

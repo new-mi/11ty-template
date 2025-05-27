@@ -1,0 +1,26 @@
+.swiper {
+	width: 600px;
+	height: 300px;
+}
+
+.swiper-slide {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.swiper-slide img {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.swiper-slide span {
+	position: relative;
+	z-index: 1;
+	color: white;
+}

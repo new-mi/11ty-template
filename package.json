@@ -11,8 +11,10 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@fancyapps/ui": "^5.0.36",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "swiper": "^11.2.8"
   },
   "devDependencies": {
     "clsx": "^2.1.1",
