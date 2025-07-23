@@ -1,4 +1,3 @@
-import React from "react";
 import BaseHtml from "../templates/BaseHtml";
 import { Header } from "../components/Header/Header";
 

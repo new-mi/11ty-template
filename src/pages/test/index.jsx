@@ -1,4 +1,3 @@
-import React from "react";
 import DefaultLayout from "../../layouts/DefaultLayout";
 import { metaPages } from "../../shared/meta-pages";
 

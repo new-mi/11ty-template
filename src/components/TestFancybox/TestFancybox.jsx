@@ -1,4 +1,3 @@
-import React from "react";
 import { images } from "./images.js";
 
 export const TestFancybox = () => {
@@ -11,7 +10,7 @@ export const TestFancybox = () => {
 					data-fancybox="gallery"
 					data-caption={image.caption}
 				>
-					<img src={image.src} />
+					<img src={image.src} alt={image.caption} />
 				</a>
 			))}
 		</div>

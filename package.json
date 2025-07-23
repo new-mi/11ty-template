@@ -18,8 +18,8 @@
 	"description": "",
 	"dependencies": {
 		"@fancyapps/ui": "^5.0.36",
-		"react": "^19.1.0",
-		"react-dom": "^19.1.0",
+		"preact": "^10.26.9",
+		"preact-render-to-string": "^5.2.6",
 		"swiper": "^11.2.8"
 	},
 	"devDependencies": {
@@ -27,7 +27,6 @@
 		"@biomejs/biome": "2.1.2",
 		"clsx": "^2.1.1",
 		"del": "^8.0.0",
-		"eleventy-plugin-react": "github:kaicataldo/eleventy-plugin-react",
 		"esbuild": "^0.25.4",
 		"prettier": "^3.5.3",
 		"sass": "^1.89.0"

@@ -1,4 +1,4 @@
-import eleventyReact from "eleventy-plugin-react";
+import eleventyPreact from "./eleventy-plugin-preact.js";
 import * as sass from "sass";
 import * as esbuild from "esbuild";
 import fs from "fs";
@@ -31,8 +31,11 @@ export default async function(eleventyConfig) {
 			`${data.page.filePathStem}.${data.page.outputFileExtension}`;
 	});
 
-  eleventyConfig.addPlugin(eleventyReact, {
+  eleventyConfig.addPlugin(eleventyPreact, {
 		minify: false,
+    enableCache: true,
+    cacheSize: 100,
+    enableStats: true, // Включаем статистику для мониторинга производительности
     postProcess: ({ html, data }) => {
 			const resultHtml = `<!DOCTYPE html>${html}`
 			const formattedHtml = prettier.format(resultHtml, {

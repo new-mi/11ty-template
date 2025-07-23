@@ -1,4 +1,3 @@
-import React from "react";
 import DefaultLayout from "../layouts/DefaultLayout";
 import { Button } from "../components/Button/Button";
 import { metaPages } from "../shared/meta-pages";

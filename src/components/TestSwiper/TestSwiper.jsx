@@ -1,4 +1,3 @@
-import React from "react";
 import { slides } from "./slides.js";
 
 export const TestSwiper = () => {
