@@ -1,27 +1,35 @@
 {
-  "name": "vite-with-plugins",
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "build": "eleventy",
-    "start": "eleventy --serve"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "@fancyapps/ui": "^5.0.36",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "swiper": "^11.2.8"
-  },
-  "devDependencies": {
-    "clsx": "^2.1.1",
-    "eleventy": "^1.0.7",
-    "eleventy-plugin-react": "github:kaicataldo/eleventy-plugin-react",
-    "esbuild": "^0.25.4",
-    "prettier": "^3.5.3",
-    "sass": "^1.89.0"
-  }
+	"name": "vite-with-plugins",
+	"version": "1.0.0",
+	"type": "module",
+	"scripts": {
+		"build": "npx @11ty/eleventy",
+		"start": "npx @11ty/eleventy --serve",
+		"lint": "npx @biomejs/biome lint ./src",
+		"lint:fix": "npx @biomejs/biome lint --write ./src",
+		"format": "npx @biomejs/biome format ./src",
+		"format:fix": "npx @biomejs/biome format --write ./src",
+		"check": "npx @biomejs/biome check ./src",
+		"check:fix": "npx @biomejs/biome check --write ./src"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"description": "",
+	"dependencies": {
+		"@fancyapps/ui": "^5.0.36",
+		"react": "^19.1.0",
+		"react-dom": "^19.1.0",
+		"swiper": "^11.2.8"
+	},
+	"devDependencies": {
+		"@11ty/eleventy": "^3.1.2",
+		"@biomejs/biome": "2.1.2",
+		"clsx": "^2.1.1",
+		"del": "^8.0.0",
+		"eleventy-plugin-react": "github:kaicataldo/eleventy-plugin-react",
+		"esbuild": "^0.25.4",
+		"prettier": "^3.5.3",
+		"sass": "^1.89.0"
+	}
 }

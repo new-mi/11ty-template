@@ -4,8 +4,28 @@ import * as esbuild from "esbuild";
 import fs from "fs";
 import path from "path";
 import * as prettier from "prettier";
+import {deleteSync} from "del";
+
+const config = {
+	quiet: true,
+	dir: {
+		input: "src/pages",
+		output: "dist",
+		includes: "../components",
+		layouts: "../layouts",
+	},
+}
+
+const dirToClean = path.join(config.dir.output, "*")
+deleteSync(dirToClean, { dot: true })
+console.log("Cleaned dist directory")
 
 export default async function(eleventyConfig) {
+	eleventyConfig.setServerOptions({
+		port: 3000,
+	})
+
+
   eleventyConfig.addGlobalData("permalink", () => {
 		return (data) =>
 			`${data.page.filePathStem}.${data.page.outputFileExtension}`;
@@ -53,15 +73,7 @@ export default async function(eleventyConfig) {
     await buildJS();
   });
 
-  return {
-    quiet: true,
-    dir: {
-      input: "src/pages",
-      output: "dist",
-      includes: "../components",
-      layouts: "../layouts",
-    },
-  };
+  return config;
 };
 
 async function buildSass() {
