@@ -21,11 +21,6 @@ deleteSync(dirToClean, { dot: true })
 console.log("Cleaned dist directory")
 
 export default async function(eleventyConfig) {
-	eleventyConfig.setServerOptions({
-		port: 3000,
-	})
-
-
   eleventyConfig.addGlobalData("permalink", () => {
 		return (data) =>
 			`${data.page.filePathStem}.${data.page.outputFileExtension}`;
