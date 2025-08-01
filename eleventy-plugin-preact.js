@@ -5,6 +5,41 @@ import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 
+// Кэш для скомпилированных компонентов
+const componentCache = new Map();
+// Кэш для временных файлов
+const tempFileCleanup = new Set();
+// Кэш для отслеживания зависимостей файлов
+const dependencyCache = new Map();
+
+// Функция для получения максимального времени модификации файла и его зависимостей
+function getMaxModificationTime(filePath, visited = new Set()) {
+  if (visited.has(filePath)) {
+    return 0; // Избегаем циклических зависимостей
+  }
+  visited.add(filePath);
+
+  try {
+    if (!fs.existsSync(filePath)) {
+      return 0;
+    }
+
+    let maxTime = fs.statSync(filePath).mtime.getTime();
+
+    // Получаем зависимости из кэша
+    const dependencies = dependencyCache.get(filePath) || [];
+
+    for (const depPath of dependencies) {
+      const depTime = getMaxModificationTime(depPath, visited);
+      maxTime = Math.max(maxTime, depTime);
+    }
+
+    return maxTime;
+  } catch {
+    return 0;
+  }
+}
+
 function forceDefaultExport(code) {
   // 1. Если уже есть export { ... as default }, ничего не добавляем
   const exportAsDefault = code.match(/export\s*\{\s*(\w+)\s+as\s+default\s*\}/ms);
@@ -38,11 +73,68 @@ function forceDefaultExport(code) {
   throw new Error('No recognizable component found');
 }
 
+// Функция для очистки всех временных файлов
+function cleanupTempFiles() {
+  for (const tempFile of tempFileCleanup) {
+    try {
+      if (fs.existsSync(tempFile)) {
+        fs.unlinkSync(tempFile);
+      }
+    } catch {
+      // Игнорируем ошибки очистки
+    }
+  }
+  tempFileCleanup.clear();
+}
+
+// Функция для очистки устаревших кэшей
+function cleanupStaleCache() {
+  const staleCacheKeys = [];
+
+  for (const [cacheKey] of componentCache) {
+    const [filePath] = cacheKey.split(':');
+    const currentMaxMtime = getMaxModificationTime(filePath);
+    const cachedMtime = parseInt(cacheKey.split(':')[1]);
+
+    if (currentMaxMtime > cachedMtime) {
+      staleCacheKeys.push(cacheKey);
+    }
+  }
+
+  for (const staleKey of staleCacheKeys) {
+    componentCache.delete(staleKey);
+  }
+
+  if (staleCacheKeys.length > 0) {
+    console.log(`🧹 Cleaned ${staleCacheKeys.length} stale cache entries`);
+  }
+}
+
+// Очистка при завершении процесса
+process.on('exit', cleanupTempFiles);
+process.on('SIGINT', () => {
+  cleanupTempFiles();
+  process.exit(0);
+});
+process.on('SIGTERM', () => {
+  cleanupTempFiles();
+  process.exit(0);
+});
+
+// Оптимизированная очистка кэша - работает с умным кэшированием
+function optimizedCacheCleanup() {
+  // Используем существующую логику cleanupStaleCache для умной очистки
+  cleanupStaleCache();
+}
+
 export default function eleventyPreactPlugin(eleventyConfig, options = {}) {
   const {
     minify = false,
-    postProcess = (html, data) => html,
-    jsxImportSource = 'preact'
+    postProcess = ({ html }) => html,
+    jsxImportSource = 'preact',
+    enableCache = true,
+    cacheSize = 100,
+    enableStats = false
   } = options;
 
   eleventyConfig.addTemplateFormats('jsx');
@@ -58,59 +150,107 @@ export default function eleventyPreactPlugin(eleventyConfig, options = {}) {
         }
       }),
     compile: async (_, inputPath) => async (data) => {
+        const startTime = enableStats ? Date.now() : 0;
         let tempFile = null;
 
-        try {
-          // Читаем содержимое файла вручную, так как inputContent может быть пустым
+                        try {
+          // Умная очистка устаревших кэшей
+          if (enableCache) {
+            optimizedCacheCleanup();
+          }
+
+          // Читаем содержимое файла и проверяем кэш
           const fileContent = fs.readFileSync(inputPath, 'utf8');
 
-          // Компилируем JSX в ESM с bundle: true для объединения импортов
-          const result = await esbuild.build({
-            stdin: {
-              contents: fileContent,
-              loader: 'jsx',
-              resolveDir: path.dirname(inputPath)
-            },
-            jsx: 'automatic',
-            jsxImportSource: jsxImportSource,
-            format: 'esm',
-            minify: minify,
-            target: 'es2020',
-            platform: 'node',
-            bundle: true,
-            write: false,
-            // Оптимизации для больших проектов
-            treeShaking: true,
-            metafile: false,
-            sourcemap: false
-          });
+          // Получаем максимальное время модификации с учетом зависимостей
+          const maxMtime = getMaxModificationTime(inputPath);
+          const cacheKey = `${inputPath}:${maxMtime}`;
 
-          // Добавляем export default <ИмяКомпонента> если нужно
-          const code = forceDefaultExport(result.outputFiles[0].text);
+          let Component;
 
-          // Создаем временный .mjs файл с уникальным именем
-          const uniqueId = randomUUID();
-          tempFile = path.join(process.cwd(), `.temp-component-${uniqueId}.mjs`);
-          fs.writeFileSync(tempFile, code);
+          if (enableCache && componentCache.has(cacheKey)) {
+            Component = componentCache.get(cacheKey);
+            if (enableStats) {
+              console.log(`📦 Cache hit for ${path.basename(inputPath)} (${Date.now() - startTime}ms)`);
+            }
+          } else {
+            // Компилируем JSX в ESM с bundle: true для объединения импортов
+            const result = await esbuild.build({
+              stdin: {
+                contents: fileContent,
+                loader: 'jsx',
+                resolveDir: path.dirname(inputPath)
+              },
+              jsx: 'automatic',
+              jsxImportSource: jsxImportSource,
+              format: 'esm',
+              minify: minify,
+              target: 'es2020',
+              platform: 'node',
+              bundle: true,
+              write: false,
+              // Включаем metafile для отслеживания зависимостей
+              metafile: true,
+              sourcemap: false,
+              treeShaking: true,
+            });
 
-          const componentModule = await import(`file://${tempFile}`);
-          const Component = componentModule.default;
-          if (!Component) {
-            throw new Error(`No default export found in ${inputPath}`);
+            // Обновляем кэш зависимостей
+            if (result.metafile?.inputs) {
+              const dependencies = Object.keys(result.metafile.inputs)
+                .filter(dep => dep !== '<stdin>' && fs.existsSync(dep))
+                .map(dep => path.resolve(dep));
+
+              dependencyCache.set(inputPath, dependencies);
+
+              if (enableStats && dependencies.length > 0) {
+                console.log(`📋 Dependencies for ${path.basename(inputPath)}: ${dependencies.map(d => path.basename(d)).join(', ')}`);
+              }
+            }
+
+            // Добавляем export default <ИмяКомпонента> если нужно
+            const code = forceDefaultExport(result.outputFiles[0].text);
+
+            // Создаем временный .mjs файл с уникальным именем
+            const uniqueId = randomUUID();
+            tempFile = path.join(process.cwd(), `.temp-component-${uniqueId}.mjs`);
+            fs.writeFileSync(tempFile, code);
+            tempFileCleanup.add(tempFile);
+
+            const componentModule = await import(`file://${tempFile}`);
+            Component = componentModule.default;
+            if (!Component) {
+              throw new Error(`No default export found in ${inputPath}`);
+            }
+
+            // Кэшируем компонент
+            if (enableCache) {
+              // Ограничиваем размер кэша
+              if (componentCache.size >= cacheSize) {
+                const firstKey = componentCache.keys().next().value;
+                componentCache.delete(firstKey);
+              }
+              componentCache.set(cacheKey, Component);
+            }
+
+            if (enableStats) {
+              console.log(`🔨 Compiled ${path.basename(inputPath)} (${Date.now() - startTime}ms)`);
+            }
           }
 
           // SSR через preact-render-to-string
           const html = renderToString(h(Component, data));
           return postProcess({ html, data });
         } catch (error) {
-          console.error(`Error processing ${inputPath}:`, error);
+          console.error(`❌ Error processing ${inputPath}:`, error.message);
           throw error;
         } finally {
-          // Очищаем временный файл
+          // Очищаем временный файл сразу после использования
           if (tempFile && fs.existsSync(tempFile)) {
             try {
               fs.unlinkSync(tempFile);
-            } catch (cleanupError) {
+              tempFileCleanup.delete(tempFile);
+            } catch {
               // Игнорируем ошибки очистки
             }
           }
