@@ -88,7 +88,7 @@ function cleanupTempFiles() {
 }
 
 // Функция для очистки устаревших кэшей
-function cleanupStaleCache() {
+function cleanupStaleCache({ logger }) {
   const staleCacheKeys = [];
 
   for (const [cacheKey] of componentCache) {
@@ -106,7 +106,7 @@ function cleanupStaleCache() {
   }
 
   if (staleCacheKeys.length > 0) {
-    console.log(`🧹 Cleaned ${staleCacheKeys.length} stale cache entries`);
+    logger.stats(`🧹 Cleaned ${staleCacheKeys.length} stale cache entries`);
   }
 }
 
@@ -122,9 +122,9 @@ process.on('SIGTERM', () => {
 });
 
 // Оптимизированная очистка кэша - работает с умным кэшированием
-function optimizedCacheCleanup() {
+function optimizedCacheCleanup({ logger }) {
   // Используем существующую логику cleanupStaleCache для умной очистки
-  cleanupStaleCache();
+  cleanupStaleCache({ logger });
 }
 
 export default function eleventyPreactPlugin(eleventyConfig, options = {}) {
@@ -134,7 +134,12 @@ export default function eleventyPreactPlugin(eleventyConfig, options = {}) {
     jsxImportSource = 'preact',
     enableCache = true,
     cacheSize = 100,
-    enableStats = false
+    logger = {
+      enabled: false,
+      info: (...args) => {},
+      error: (...args) => {},
+      stats: (...args) => {}
+    }
   } = options;
 
   eleventyConfig.addTemplateFormats('jsx');
@@ -150,13 +155,13 @@ export default function eleventyPreactPlugin(eleventyConfig, options = {}) {
         }
       }),
     compile: async (_, inputPath) => async (data) => {
-        const startTime = enableStats ? Date.now() : 0;
+        const startTime = Date.now();
         let tempFile = null;
 
                         try {
           // Умная очистка устаревших кэшей
           if (enableCache) {
-            optimizedCacheCleanup();
+            optimizedCacheCleanup({ logger });
           }
 
           // Читаем содержимое файла и проверяем кэш
@@ -170,9 +175,7 @@ export default function eleventyPreactPlugin(eleventyConfig, options = {}) {
 
           if (enableCache && componentCache.has(cacheKey)) {
             Component = componentCache.get(cacheKey);
-            if (enableStats) {
-              console.log(`📦 Cache hit for ${path.basename(inputPath)} (${Date.now() - startTime}ms)`);
-            }
+            logger.stats(`📦 Cache hit for ${path.basename(inputPath)} (${Date.now() - startTime}ms)`);
           } else {
             // Компилируем JSX в ESM с bundle: true для объединения импортов
             const result = await esbuild.build({
@@ -203,9 +206,7 @@ export default function eleventyPreactPlugin(eleventyConfig, options = {}) {
 
               dependencyCache.set(inputPath, dependencies);
 
-              if (enableStats && dependencies.length > 0) {
-                console.log(`📋 Dependencies for ${path.basename(inputPath)}: ${dependencies.map(d => path.basename(d)).join(', ')}`);
-              }
+              logger.stats(`📋 Dependencies for ${path.basename(inputPath)}: ${dependencies.map(d => path.basename(d)).join(', ')}`);
             }
 
             // Добавляем export default <ИмяКомпонента> если нужно
@@ -233,16 +234,14 @@ export default function eleventyPreactPlugin(eleventyConfig, options = {}) {
               componentCache.set(cacheKey, Component);
             }
 
-            if (enableStats) {
-              console.log(`🔨 Compiled ${path.basename(inputPath)} (${Date.now() - startTime}ms)`);
-            }
+            logger.stats(`🔨 Compiled ${path.basename(inputPath)} (${Date.now() - startTime}ms)`);
           }
 
           // SSR через preact-render-to-string
           const html = renderToString(h(Component, data));
           return postProcess({ html, data });
         } catch (error) {
-          console.error(`❌ Error processing ${inputPath}:`, error.message);
+          logger.error(`❌ Error processing ${inputPath}:`, error.message);
           throw error;
         } finally {
           // Очищаем временный файл сразу после использования

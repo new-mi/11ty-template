@@ -16,9 +16,29 @@ const config = {
 	},
 }
 
+const logger = {
+	enabled: false,
+	enableStats: false,
+	info: (...args) => {
+		if (logger.enabled) {
+			console.log(...args);
+		}
+	},
+	error: (...args) => {
+		if (logger.enabled) {
+			console.error(...args);
+		}
+	},
+	stats: (...args) => {
+		if (logger.enabled && logger.enableStats) {
+			console.log(...args);
+		}
+	},
+}
+
 const dirToClean = path.join(config.dir.output, "*")
 deleteSync(dirToClean, { dot: true })
-console.log("Cleaned dist directory")
+logger.info("Cleaned dist directory")
 
 export default async function(eleventyConfig) {
   eleventyConfig.addGlobalData("permalink", () => {
@@ -26,13 +46,11 @@ export default async function(eleventyConfig) {
 			`${data.page.filePathStem}.${data.page.outputFileExtension}`;
 	});
 
-  const isDev = process.env.NODE_ENV !== 'production';
-
   eleventyConfig.addPlugin(eleventyPreact, {
-		minify: !isDev,
+		minify: false,
     enableCache: true, // Кэш всегда включен для оптимизации
-    cacheSize: isDev ? 200 : 100, // Больше кэша в dev режиме
-    enableStats: isDev, // Статистика только в dev режиме
+    cacheSize: 100, // Больше кэша в dev режиме
+		logger,
     postProcess: ({ html }) => {
 			const resultHtml = `<!DOCTYPE html>${html}`
 			const formattedHtml = prettier.format(resultHtml, {
@@ -75,18 +93,18 @@ export default async function(eleventyConfig) {
 
       if (needsClearSass) {
         buildCache.sass.clear();
-        console.log("🔄 Sass cache cleared");
+        logger.info("🔄 Sass cache cleared");
       }
       if (needsClearJS) {
         buildCache.js.clear();
-        console.log("🔄 JS cache cleared");
+        logger.info("🔄 JS cache cleared");
       }
     }
   });
 
   eleventyConfig.on("beforeBuild", async () => {
     const startTime = Date.now();
-    console.log("🚀 Starting asset build...");
+    logger.info("🚀 Starting asset build...");
 
     try {
       await Promise.all([
@@ -95,10 +113,10 @@ export default async function(eleventyConfig) {
       ]);
 
       const buildTime = Date.now() - startTime;
-      console.log(`✅ Asset build completed in ${buildTime}ms`);
+      logger.info(`✅ Asset build completed in ${buildTime}ms`);
     } catch (error) {
       const buildTime = Date.now() - startTime;
-      console.error(`❌ Asset build failed after ${buildTime}ms:`, error.message);
+      logger.error(`❌ Asset build failed after ${buildTime}ms:`, error.message);
       throw error;
     }
   });
@@ -165,16 +183,16 @@ async function buildSass() {
         buildCache.sass.set(filename, inputMtime);
         compiledCount++;
       } catch (sassError) {
-        console.error(`❌ Sass compilation error in ${filename}:`, sassError.message);
+        logger.error(`❌ Sass compilation error in ${filename}:`, sassError.message);
         throw sassError;
       }
     }
 
     if (compiledCount > 0) {
-      console.log(`✅ Compiled ${compiledCount} Sass file(s)`);
+      logger.info(`✅ Compiled ${compiledCount} Sass file(s)`);
     }
   } catch (error) {
-    console.error('❌ Sass build failed:', error.message);
+    logger.error('❌ Sass build failed:', error.message);
     throw error;
   }
 }
@@ -219,7 +237,7 @@ async function buildJS() {
         buildCache.js.set(filename, inputMtime);
         compiledCount++;
       }).catch(error => {
-        console.error(`❌ JS build error in ${filename}:`, error.message);
+        logger.error(`❌ JS build error in ${filename}:`, error.message);
         throw error;
       });
 
@@ -228,10 +246,10 @@ async function buildJS() {
 
     if (buildPromises.length > 0) {
       await Promise.all(buildPromises);
-      console.log(`✅ Compiled ${compiledCount} JS file(s)`);
+      logger.info(`✅ Compiled ${compiledCount} JS file(s)`);
     }
   } catch (error) {
-    console.error('❌ JS build failed:', error.message);
+    logger.error('❌ JS build failed:', error.message);
     throw error;
   }
 }
