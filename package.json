@@ -4,7 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "npx @11ty/eleventy",
-		"start": "npx @11ty/eleventy --serve --port 3000",
+		"dev": "npx @11ty/eleventy --serve --port 3000",
 		"preview": "npm run build && npx @11ty/eleventy --serve --port 3001",
 		"lint": "npx @biomejs/biome lint ./src",
 		"lint:fix": "npx @biomejs/biome lint --write ./src",
